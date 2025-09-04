@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Tạo Avatar ĐH 2025-2030</title>
+  <style>
+    body { text-align:center; font-family:sans-serif; background:#f5f5f5; }
+    h2 { margin-top:20px; }
+    canvas { margin-top:20px; background:#fff; border:1px solid #ccc; touch-action:none; cursor:grab; }
+    canvas:active { cursor:grabbing; }
+    #download { display:inline-block; margin-top:15px; padding:10px 20px;
+                background:#0066cc; color:#fff; text-decoration:none; border-radius:5px; }
+    #download:hover { background:#004c99; }
+  </style>
+</head>
+<body>
+  <h2>Tạo Avatar ĐH 2025-2030</h2>
+  <p>Chọn ảnh của bạn để ghép vào khung</p>
+  <input type="file" id="upload" accept=".png,.jpg,.jpeg,.webp">
+  <br>
+  <canvas id="canvas" width="800" height="800"></canvas>
+  <br>
+  <a id="download" download="avatar.png">Tải ảnh xuống</a>
+
+  <script>
+    const upload = document.getElementById('upload');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const frame = new Image();
+    frame.src = "frame.png"; // khung PNG trong suốt (avatar là lỗ)
+
+    let img = null;
+    let offsetX = 0, offsetY = 0;
+    let scale = 1;
+    let isDragging = false;
+    let startX, startY;
+    let isTouchDragging = false;
+    let touchStartX, touchStartY;
+    let startDistance = 0, startScale = 1;
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (img) {
+        ctx.drawImage(img, offsetX, offsetY, img.width * scale, img.height * scale);
+      }
+      ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+      document.getElementById('download').href = canvas.toDataURL();
+    }
+
+    upload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        img = new Image();
+        img.onload = () => {
+          scale = Math.max(canvas.width / img.width, canvas.height / img.height);
+          offsetX = (canvas.width - img.width * scale) / 2;
+          offsetY = (canvas.height - img.height * scale) / 2;
+          draw();
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // PC kéo ảnh
+    canvas.addEventListener('mousedown', (e) => {
+      if (!img) return;
+      isDragging = true;
+      startX = e.offsetX - offsetX;
+      startY = e.offsetY - offsetY;
+    });
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging || !img) return;
+      offsetX = e.offsetX - startX;
+      offsetY = e.offsetY - startY;
+      draw();
+    });
+    canvas.addEventListener('mouseup', () => isDragging = false);
+    canvas.addEventListener('mouseleave', () => isDragging = false);
+
+    // PC zoom bằng lăn chuột
+    canvas.addEventListener('wheel', (e) => {
+      if (!img) return;
+      e.preventDefault();
+      const zoom = e.deltaY < 0 ? 1.05 : 0.95;
+      scale *= zoom;
+      draw();
+    });
+
+    // Mobile: kéo 1 ngón, zoom 2 ngón
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        isTouchDragging = true;
+        touchStartX = e.touches[0].clientX - offsetX;
+        touchStartY = e.touches[0].clientY - offsetY;
+      } else if (e.touches.length === 2) {
+        startDistance = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        startScale = scale;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1 && isTouchDragging) {
+        e.preventDefault();
+        offsetX = e.touches[0].clientX - touchStartX;
+        offsetY = e.touches[0].clientY - touchStartY;
+        draw();
+      } else if (e.touches.length === 2) {
+        e.preventDefault();
+        const newDistance = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const zoom = newDistance / startDistance;
+        scale = startScale * zoom;
+        draw();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => {
+      isTouchDragging = false;
+    });
+  </script>
+</body>
+</html>
